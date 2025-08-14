@@ -1,0 +1,8 @@
+groq
+typing 
+typing_extensions 
+langgraph
+langchain 
+dotenv
+matplotlib
+IPython

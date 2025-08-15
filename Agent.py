@@ -11,6 +11,7 @@ from langgraph.graph import StateGraph, START, END
 from typing import List, Tuple, Optional
 import pandas as pd
 import csv
+import ast
 
 load_dotenv()
 API_KEY = "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"
@@ -65,6 +66,8 @@ def main():
         return state
     
     def visualize(data):
+        
+        
         data = eval(data)
         dates = list(data.keys())
         positive = [data[date]['positive'] for date in dates]
@@ -75,20 +78,37 @@ def main():
         x = range(len(dates))
         bar_width = 0.2
 
-        plt.bar([i - 1.5 * bar_width for i in x], positive, width=bar_width, label='Positive', color = "green")
-        plt.bar([i - 0.5 * bar_width for i in x], neutral, width=bar_width, label='Neutral', color = "gray")
-        plt.bar([i + 0.5 * bar_width for i in x], negative, width=bar_width, label='Negative', color = "red")
-        plt.bar([i + 1.5 * bar_width for i in x], total, width=bar_width, label='Total', color='yellow')
-
+        # Plot bars
+        plt.bar([i - 1.5*bar_width for i in x], positive, width=bar_width, label='Positive', color='green')
+        plt.bar([i - 0.5* bar_width for i in x],negative, width=bar_width, label='Negative', color='red')
+        plt.bar([i + 0.5*bar_width for i in x], neutral, width=bar_width, label='Neutral', color='blue')
+        plt.bar([i + 1.5*bar_width for i in x], total, width=bar_width, label='Total', color='yellow')
 
         plt.xticks(x, dates, rotation=45)
+        plt.xlabel("Date")
         plt.ylabel("Count")
-        plt.title("entiment visualization of Counts by Date")
+        plt.title("Sentiment Analysis Over Time")
         plt.legend()
         plt.tight_layout()
         plt.show()
         
-
+    def parse_date_range(user_query: str, client) -> Tuple[pd.Timestamp, pd.Timestamp]:
+        prompt = f"""
+        Convert the user's date range request into start_date and end_date in YYYY-MM-DD format.
+        Only return valid String in this format:
+            "Start day to end day" 
+        date formatting - "YYYY-MM-DD"
+        User request: "{user_query}"
+        Today is {datetime.now().strftime("%Y-%m-%d")}
+        """
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama3-8b-8192",
+            temperature=0
+        )
+        
+        date_data = chat_completion.choices[0].message.content
+        return date_data
     def sentiment_visualization_agent(state: State) -> State:
         date_range = state["user_query"]
         history =  df = pd.read_csv('feedback.csv', sep='|')
@@ -127,7 +147,7 @@ def main():
         print(state["response"])
         visualize(state["response"])
         return state
-    
+        
     # --- Define Agents DocString ---
     agent_docs = {
         "feedback_agent": feedback_agent.__doc__,
@@ -159,7 +179,8 @@ def main():
 
         # the router agent 
         # this agent will decide the route path wether "Feedback Aget"  or "Sentiment Visualization Agent"
-        print("\n===Router Agent===\n")
+        print("===Router Agent===")
+        print("Router Agent Works")
         return state
     
 

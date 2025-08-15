@@ -58,9 +58,10 @@ def main():
         
         state["response"] = chat_completion.choices[0].message.content
         timestamp = datetime.now()
-        with open("Feedback_History","a+") as file:
-            input_str = str(timestamp) + " " + topic + " " + state["response"] + "\n"
-            file.write(input_str)
+        with open("feedback.csv","a+") as file:
+            input_inventory = f"Date and time: {timestamp} | customer feedback: {topic}\n"
+     
+            file.write(input_inventory)
         return state
     
     def visualize(data):
@@ -90,7 +91,7 @@ def main():
 
     def sentiment_visualization_agent(state: State) -> State:
         date_range = state["user_query"]
-        history =  df = pd.read_csv('Feedback_History')
+        history =  df = pd.read_csv('feedback.csv', sep='|')
 
         print(history)
         prompt = f"""You are a data analyst for SteamNoodles' restaurant.

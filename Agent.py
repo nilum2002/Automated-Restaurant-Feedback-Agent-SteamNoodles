@@ -1,6 +1,6 @@
 import os 
 import json
-import datetime 
+from datetime import datetime
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from groq import Groq
@@ -8,12 +8,14 @@ from typing import Annotated
 from typing import Literal
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END 
-
+from typing import List, Tuple, Optional
+import pandas as pd
+import csv
 
 load_dotenv()
 API_KEY = "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"
 
-# define the states
+
 class State(TypedDict):
     user_query : str
     response: str
@@ -53,7 +55,12 @@ def main():
             model = "llama3-8b-8192",
             temperature = 0.4
         )
+        
         state["response"] = chat_completion.choices[0].message.content
+        timestamp = datetime.now()
+        with open("Feedback_History","a+") as file:
+            input_str = str(timestamp) + " " + topic + " " + state["response"] + "\n"
+            file.write(input_str)
         return state
     
     def visualize(data):
@@ -83,13 +90,15 @@ def main():
 
     def sentiment_visualization_agent(state: State) -> State:
         date_range = state["user_query"]
+        history =  df = pd.read_csv('Feedback_History')
+
+        print(history)
         prompt = f"""You are a data analyst for SteamNoodles' restaurant.
                     Based on the user's request for a date range, generate a sample summary of sentiment data.
                     **Content:** You do not have access to a real database. **Do not Generate realistic, sample data for the requested period** just memoize previous feedbacks
                     look back to previous history of customer feedback and analyse.
                     For example, if the user asks for "last week" or certain time range you can output in to a dictionary consist of following:
                     *Structure*
-
                     date : date 
                     positive: num of positive feedbacks 
                     negative: num of negative feedbacks
@@ -97,11 +106,13 @@ def main():
                     total : num of total feedbacks
                     
                     User's Date Range Request: "{date_range}"
-                    If user want a analysis of current dat to a previous day or week just get thw current date : {datetime.date.today()}
+                    Use only the ***Feedback history***  {history} to  analysis.
+                    If user want a analysis of current dat to a previous day or week just get thw current date : {datetime.now()}
                     **Note that to make sure to give report **only** as a dictionary referring to the following structure**
                     **Don't describe the summary and just give the result**
-                    Don't give "Based on the user's request for the last week's user feedback report, I've analyzed the previous customer feedback data and generated a summary report. Here's the output:"
+                    Don't give "Based on the user's request for the last week's user feedback report, I've analyzed the previous customer feedback and generated a summary report. Here's the output:"
                     and This report summarizes the sentiment analysis of customer feedback for the last week (March 13th to March 19th). The dictionary keys represent the dates, and the values provide the number of positive, negative, neutral, and total feedbacks for each date.
+                    Don't give the response like ***Here is the summary report for the last week:*** way 
                     """
 
         chat_completion = client.chat.completions.create(
@@ -176,13 +187,13 @@ def main():
     from IPython.display import Image, display
     with open("graph.png", "wb") as f:
         f.write(graph.get_graph().draw_mermaid_png())
-
+    
     while True:
         user_input = input("\nEnter your query (or type 'quit' to exit): ")
         if user_input.lower() == 'quit':
             break
 
-        initial_state = {"user_query": user_input, "response": ""}
+        initial_state = {"user_query": user_input, "response": "" }
         
         # Invoke the graph with the user's query
         final_state = graph.invoke(initial_state)

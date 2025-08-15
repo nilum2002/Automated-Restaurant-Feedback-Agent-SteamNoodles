@@ -129,8 +129,8 @@ neutral_feedbacks = [
 
 n = 0
 
-while n < 100:
-    with open("feedback.csv", "a+") as file:
+while n < 500:
+    with open("./feedback.csv", "a+") as file:
         all_feedbacks = positive_feedbacks + negative_feedbacks + neutral_feedbacks
         customer_feedback = random.choice(all_feedbacks)
         date_time = random.choice(date_and_time)

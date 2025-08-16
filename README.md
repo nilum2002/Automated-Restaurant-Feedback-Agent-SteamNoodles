@@ -12,7 +12,7 @@ Welcome to SteamNoodle, an intelligent LLM-powered system that transforms the wa
   * Language Model: Groq API via LangGraph
   * Framework: LangGraph for orchestrating LLM workflows
   * Data Handling: Python for preprocessing, storing, and summarizing feedback
-  * Optional Integrations: Can connect to databases, web forms, or APIs for real-time feedback ingestion(Implemented soon in new version)
+  * Optional Integrations: Can connect to databases, web forms, or APIs for real-time feedback ingestion(Implemented soon in new version) 
 ### ⚡ Quick Start
     # 1️⃣ Clone the repository
       git clone https://github.com/nilum2002/-Automated-Restaurant-Feedback-Agent-SteamNoodles.git

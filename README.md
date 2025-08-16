@@ -42,18 +42,16 @@ Welcome to SteamNoodle, an intelligent LLM-powered system that transforms the wa
 ### How Agent Works:
 
 01. Feedback Agent 
-   <img width="1095" height="152" alt="Screenshot 2025-08-15 132657" src="https://github.com/user-attachments/assets/d1ee0f37-31c8-44f2-9e59-79232aa065fb" />
+   <img width="1095" height="152" alt="Screenshot 2025-08-15 132657" src="./img/Screenshot 2025-08-17 025026.png" />
 
 02. Sentiment Visualization Agent
-   <img width="1419" height="147" alt="Screenshot 2025-08-15 133037" src="https://github.com/user-attachments/assets/322a474b-916c-41fe-8872-5dec5edfe41d" />
+   <img width="1419" height="147" alt="Screenshot 2025-08-15 133037" src="./img/Screenshot 2025-08-17 025217.png" />
 03. Visualization on Customer Feedback
 
-   Last Year Analysis 
+   Images Analysis 
    
-   <img width="640" height="480" alt="Last Year analyis" src="https://github.com/user-attachments/assets/c37b1d00-99d8-4dd5-8ae4-b7f90dfe7ccc" />
-
-   Last Week Analysis
+   <img width="640" height="480" alt="Last Year analyis" src= "./img/Screenshot 2025-08-17 024823.png" />
    
-   <img width="640" height="480" alt="Last week analysis" src="https://github.com/user-attachments/assets/4155d7f7-943b-4cb3-b38c-f2285747530c" />
+   <img width="640" height="480" alt="Last week analysis" src= "./img/Screenshot 2025-08-17 025206.png" />
 
 - Warmly Welcome for Contributions

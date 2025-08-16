@@ -1,5 +1,5 @@
 ### 🍜 Automated Restaurant Feedback Agent – SteamNoodle
-Welcome to SteamNoodle, an intelligent LLM-powered system that transforms the way restaurants gather and analyze customer feedback. Built using LangChain, this agent automates the feedback collection, interpretation, and actionable insights process—helping restaurants improve service, menu offerings, and overall customer satisfaction.
+Welcome to SteamNoodle, an intelligent LLM-powered system that transforms the way restaurants gather and analyze customer feedback. Built using LangGraph, this agent automates the feedback collection, interpretation, and actionable insights process—helping restaurants improve service, menu offerings, and overall customer satisfaction.
 
 ### 🚀 Key Features
   * Automated Feedback Analysis: Leveraging state-of-the-art LLMs to understand customer sentiments and opinions.

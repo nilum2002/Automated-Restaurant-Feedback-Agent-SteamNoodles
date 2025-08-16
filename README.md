@@ -10,7 +10,7 @@ Welcome to SteamNoodle, an intelligent LLM-powered system that transforms the wa
 
 ### 🛠 Tech Stack
   * Language Model: Groq API via LangGraph
-  * Framework: LangGraph for orchestrating LLM workflows
+  * Framework: LangGraph for orchestrating LLM workflows 
   * Data Handling: Python for preprocessing, storing, and summarizing feedback
   * Optional Integrations: Can connect to databases, web forms, or APIs for real-time feedback ingestion(Implemented soon in new version) 
 ### ⚡ Quick Start

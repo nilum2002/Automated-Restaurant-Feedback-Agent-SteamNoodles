@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import time 
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from groq import Groq
@@ -8,6 +9,7 @@ from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END 
 from typing import List, Tuple, Optional
 import pandas as pd
+
 
 
 load_dotenv()
@@ -27,7 +29,7 @@ def main():
     def feedback_agent(state: State) ->  State:
         
         topic = state["user_query"]
-        
+        # this is for feedback
         prompt = f"""You are an AI assistant for "SteamNoodles," a restaurant known for its innovative approach to customer experience. Your persona is a friendly, empathetic, and professional human customer service representative.
 
                     Your task is to write a short, polite, and context-aware reply to the customer feedback provided below.
@@ -44,95 +46,167 @@ def main():
                     refer to the topic given below
                     {topic}
                     """
-                
-        # invoke the chat 
-        chat_completion = client.chat.completions.create(
+        # this is for identify the feedback tone
+        prompt_tone = f"""You are an AI assistant for SteamNoodles, a restaurant known for its innovative approach to customer experienceIdentify the {topic} and give me only the tone of the feedback 
+                    1.  **Match the Tone:**
+                        *   For **positive** feedback as Positive
+                        *   For **negative** feedback as Negative
+                        *   For **neutral ** feedback as Neutral
+                    **Crucial Rules:**
+                    -   **DO NOT** provide any text, explanation, or conversation.
+                    -   **DO NOT** use markdown code blocks (like ```python...```).
+                    -   The output must be **only** the string list and nothing else.
+                    only give the match tone of the {topic}
+        
+        
+                    """
+        # invoke the chat
+        chat_completion_feedback = client.chat.completions.create(
             messages = [
                 {"role": "user" , "content": prompt }
             ],
             model = "llama3-8b-8192",
             temperature = 0.4
         )
+        # invoke tone 
+        chat_completion_tone = client.chat.completions.create(
+            messages = [
+                {"role": "user" , "content": prompt_tone}
+            ],
+            model = "llama3-8b-8192",
+            temperature = 0.4
+        )
         
-        state["response"] = chat_completion.choices[0].message.content
-        timestamp = datetime.now()
+        state["response"] = chat_completion_feedback.choices[0].message.content
+        customer_tone = chat_completion_tone.choices[0].message.content
+        timestamp = datetime.now().strftime('%Y-%m-%d')
+        
         with open("feedback.csv","a+") as file:
-            input_inventory = f"Date and time: {timestamp} | customer feedback: {topic}\n"
+            input_inventory = f"{timestamp} | {customer_tone} | {topic}\n"
      
             file.write(input_inventory)
         return state
     
-    def visualize(data):
-        
-        
-        data = eval(data)
-        dates = list(data.keys())
-        positive = [data[date]['positive'] for date in dates]
-        negative = [data[date]['negative'] for date in dates]   
-        neutral = [data[date]['neutral'] for date in dates]
-        total = [data[date]['total'] for date in dates]
+    def visualize(date_range):
+        if eval(date_range)[0] == "None Range":
+            print("***Warning***")
+            print("Please Give a date range for customer analysis process")
+        else:
+            date_range = eval(date_range)
+            start_date = date_range[0]
+            end_date = date_range[1]
+            
 
-        x = range(len(dates))
-        bar_width = 0.2
+            df = pd.read_csv('feedback.csv', sep='|', header=None, names=['Date', 'Tone', 'Feedback'], dtype=str)
+            df = df.apply(lambda x: x.str.strip())
+            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 
-        # Plot bars
-        plt.bar([i - 1.5*bar_width for i in x], positive, width=bar_width, label='Positive', color='green')
-        plt.bar([i - 0.5* bar_width for i in x],negative, width=bar_width, label='Negative', color='red')
-        plt.bar([i + 0.5*bar_width for i in x], neutral, width=bar_width, label='Neutral', color='blue')
-        plt.bar([i + 1.5*bar_width for i in x], total, width=bar_width, label='Total', color='yellow')
+            df = df.dropna(subset=['Date'])
+    
+            
+            
+            mask = (df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))
+            df_range = df.loc[mask]
+            # color=['#4CAF50', '#F44336', '#FFC107']
+            daily_counts = df_range.groupby([df_range['Date'].dt.date, 'Tone']).size().unstack(fill_value=0)
+            for tone in ["Positive", "Negative", "Neutral"]:
+                if tone not in daily_counts.columns:
+                    daily_counts[tone] = 0
+            if not daily_counts.empty:
+                daily_counts["Total"] = daily_counts.sum(axis=1)
+                daily_counts = daily_counts.sort_index()
 
-        plt.xticks(x, dates, rotation=45)
-        plt.xlabel("Date")
-        plt.ylabel("Count")
-        plt.title("Sentiment Analysis Over Time")
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
-        
-    def parse_date_range(user_query: str, client) -> Tuple[pd.Timestamp, pd.Timestamp]:
-        prompt = f"""
-        Convert the user's date range request into start_date and end_date in YYYY-MM-DD format.
-        Only return valid String in this format:
-            "Start day to end day" 
-        date formatting - "YYYY-MM-DD"
-        User request: "{user_query}"
-        Today is {datetime.now().strftime("%Y-%m-%d")}
-        """
-        chat_completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama3-8b-8192",
-            temperature=0
-        )
-        
-        date_data = chat_completion.choices[0].message.content
-        return date_data
+                # Plot
+                daily_counts[["Positive", "Negative", "Neutral", "Total"]].plot(
+                    kind="bar",
+                    figsize=(12, 8),
+                    color=["#4CAF50", "#FA1100", "#646265", "#A7FA0D"]
+                )
+            
+            plt.title(f"Customer Feedback from {start_date} to {end_date}")
+            plt.xlabel("Date")
+            plt.ylabel("Number of Feedbacks")
+            plt.xticks(ticks=range(0, len(daily_counts), 5), labels=daily_counts.index[::5], rotation=45)
+            plt.show()  
+
     def sentiment_visualization_agent(state: State) -> State:
-        date_range = state["user_query"]
-        history =  df = pd.read_csv('feedback.csv', sep='|')
+        user_prompt = state["user_query"]
+        
+        today = datetime.today().strftime('%Y-%m-%d')
+        prompt = f"""You are a precise, single-purpose date-parsing engine. Your only function is to convert a user's natural language query into a string literal representing a Python list with two date strings: a start date and an end date.
 
-        print(history)
-        prompt = f"""You are a data analyst for SteamNoodles' restaurant.
-                    Based on the user's request for a date range, generate a sample summary of sentiment data.
-                    **Content:** You do not have access to a real database. **Do not Generate realistic, sample data for the requested period** just memoize previous feedbacks
-                    look back to previous history of customer feedback and analyse.
-                    For example, if the user asks for "last week" or certain time range you can output in to a dictionary consist of following:
-                    *Structure*
-                    date : date 
-                    positive: num of positive feedbacks 
-                    negative: num of negative feedbacks
-                    neutral : num of neutral feedbacks
-                    total : num of total feedbacks
-                    
-                    User's Date Range Request: "{date_range}"
-                    Use only the ***Feedback history***  {history} to  analysis.
-                    If user want a analysis of current dat to a previous day or week just get thw current date : {datetime.now()}
-                    **Note that to make sure to give report **only** as a dictionary referring to the following structure**
-                    **Don't describe the summary and just give the result**
-                    Don't give "Based on the user's request for the last week's user feedback report, I've analyzed the previous customer feedback and generated a summary report. Here's the output:"
-                    and This report summarizes the sentiment analysis of customer feedback for the last week (March 13th to March 19th). The dictionary keys represent the dates, and the values provide the number of positive, negative, neutral, and total feedbacks for each date.
-                    Don't give the response like ***Here is the summary report for the last week:*** way 
-                    """
+                **Output Requirements:**
+                1.  **Format:** The output MUST be a string that looks exactly like a Python list: `['YYYY-MM-DD', 'YYYY-MM-DD']`.
+                2.  **Content:** For a query about a single day, the start and end dates must be the same.
+                3.  **Reference Date:** Use the current date provided as the reference for all relative queries.
 
+                **Crucial Rules:**
+                -   **DO NOT** provide any text, explanation, or conversation.
+                -   **DO NOT** use markdown code blocks.
+                -   The output must be **only** the string list and nothing else.
+
+                **Current Date for Reference:** {today}
+
+                ---
+                **--- EXAMPLES ---**
+                You must learn from these patterns and handle similar phrasings.
+
+                **// Single Day Examples**
+                User Query: "today"
+                Output String: ['{today}', '{today}']
+
+                User Query: "yesterday"
+                Output String: ['{(datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")}', '{(datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")}']
+
+                User Query: "August 15, 2025"
+                Output String: ['2025-08-15', '2025-08-15']
+
+                **// Week-Based Examples**
+                User Query: "last 7 days"
+                Output String: ['{(datetime.today() - timedelta(days=6)).strftime("%Y-%m-%d")}', '{today}']
+
+                User Query: "this week"
+                Output String: ['{(datetime.today() - timedelta(days=datetime.today().weekday())).strftime("%Y-%m-%d")}', '{today}']
+
+                User Query: "last week"
+                Output String: ['{(datetime.today() - timedelta(days=datetime.today().weekday()+7)).strftime("%Y-%m-%d")}', '{(datetime.today() - timedelta(days=datetime.today().weekday()+1)).strftime("%Y-%m-%d")}']
+
+                User Query: "the past two weeks"
+                Output String: ['{(datetime.today() - timedelta(days=13)).strftime("%Y-%m-%d")}', '{today}']
+
+                **// Month-Based Examples**
+                User Query: "this month"
+                Output String: ['{datetime.today().replace(day=1).strftime("%Y-%m-%d")}', '{today}']
+
+                User Query: "last month"
+                Output String: ['{(datetime.today().replace(day=1) - timedelta(days=1)).replace(day=1).strftime("%Y-%m-%d")}', '{(datetime.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m-%d")}']
+
+                User Query: "last 30 days"
+                Output String: ['{(datetime.today() - timedelta(days=29)).strftime("%Y-%m-%d")}', '{today}']
+
+                User Query: "August 2025"
+                Output String: ['2025-08-01', '2025-08-31']
+
+                **// Year-Based Examples**
+                User Query: "this year"
+                Output String: ['{datetime.today().replace(month=1, day=1).strftime("%Y-%m-%d")}', '{today}']
+
+                User Query: "last year"
+                Output String: ['{datetime.today().replace(year=datetime.today().year-1, month=1, day=1).strftime("%Y-%m-%d")}', '{datetime.today().replace(year=datetime.today().year-1, month=12, day=31).strftime("%Y-%m-%d")}']
+
+                User Query: "2024"
+                Output String: ['2024-01-01', '2024-12-31']
+
+                **// Specific Range Examples**
+                User Query: "from Aug 1 to Aug 10 2025"
+                Output String: ['2025-08-01', '2025-08-10']
+                ---
+
+                **User Query:** "{user_prompt}"
+                **Output String:**
+                """
+
+        
         chat_completion = client.chat.completions.create(
             messages = [
                 {"role": "user" , "content": prompt }
@@ -140,8 +214,7 @@ def main():
             model = "llama3-8b-8192",
             temperature = 0.4
         )
-        state["response"] = chat_completion.choices[0].message.content 
-        print(state["response"])
+        state["response"] = chat_completion.choices[0].message.content
         visualize(state["response"])
         return state
         
@@ -159,8 +232,8 @@ def main():
             You can choose from the following agents:
             - feedback_agent: {agent_docs['feedback_agent']}
             - sentiment_visualization_agent: {agent_docs['sentiment_visualization_agent']}
-            if the user gives a feedback related to the noodles its a "feedback"
-            if the user asks a customer feedback analysis or report related to a time range its a "sentiment_visualization"
+            if the user gives a feedback related to the noodles or related to food and beverages its a "feedback"
+            if the user asks a customer feedback analysis or report related to a time range or date range its a "sentiment_visualization"
             you should handle this query on {state['user_query']} Respond with just the agent name.\n
             """
         chat_completion = client.chat.completions.create(
@@ -207,7 +280,9 @@ def main():
     with open("graph.png", "wb") as f:
         f.write(graph.get_graph().draw_mermaid_png())
     
+    
     while True:
+        start_time = time.time()
         user_input = input("\nEnter your query (or type 'quit' to exit): ")
         if user_input.lower() == 'quit':
             break
@@ -221,6 +296,8 @@ def main():
         print("\n === Final Output === ")
         a = final_state.get("response", "No response was generated.")
         print(a)
+        end_time = time.time()
+        print(f"The Execution time is {end_time-start_time} seconds")
 
         
 

@@ -13,7 +13,8 @@ import pandas as pd
 
 
 load_dotenv()
-API_KEY = "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"
+# enter your API key 
+API_KEY = ""
 
 
 class State(TypedDict):
